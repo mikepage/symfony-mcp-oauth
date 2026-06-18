@@ -8,3 +8,8 @@
 /var/
 /vendor/
 ###< symfony/framework-bundle ###
+
+###> oauth ###
+# RSA signing keys — generate locally with `make keys`, never commit.
+/config/oauth/*.pem
+###< oauth ###

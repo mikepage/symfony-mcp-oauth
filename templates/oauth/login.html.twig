@@ -1,0 +1,31 @@
+{% extends 'oauth/base.html.twig' %}
+
+{% block body %}
+    {% import 'oauth/_form.html.twig' as form %}
+
+    <div class="card">
+        <h1>Sign in</h1>
+
+        {% if error %}
+            <div class="alert">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+        {% endif %}
+
+        <form method="post" action="{{ path('oauth_login', app.request.query.all) }}">
+            {{ form.field('_username', 'Email', type='email', value=last_username, placeholder='you@example.com', autocomplete='email', autofocus=true) }}
+            {{ form.field('_password', 'Password', type='password', placeholder='Your password', autocomplete='current-password') }}
+
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+            {# Replay the OAuth authorization request so the resume does not depend
+               on the session target path. See App\OAuth\Security\OAuthLoginEntryPoint. #}
+            {% if target_path %}
+                <input type="hidden" name="_target_path" value="{{ target_path }}">
+            {% endif %}
+            {% if failure_path %}
+                <input type="hidden" name="_failure_path" value="{{ failure_path }}">
+            {% endif %}
+
+            {{ form.submit('Sign in', extraClass='') }}
+        </form>
+    </div>
+{% endblock %}

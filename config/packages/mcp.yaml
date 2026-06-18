@@ -1,0 +1,20 @@
+mcp:
+    app: 'Symfony MCP OAuth Example'
+    version: '1.0.0'
+    description: 'An example Model Context Protocol server for Symfony, secured with OAuth 2.1.'
+    instructions: 'Authenticate with OAuth to call tools on behalf of a user.'
+    # Expose the MCP server over Streamable HTTP at /mcp (protected by the
+    # `mcp` security firewall — see config/packages/security.yaml).
+    client_transports:
+        http: true
+    http:
+        path: /mcp
+        session:
+            store: file
+            # Keep MCP sessions out of the cache dir so cache:clear doesn't wipe
+            # live MCP sessions and break clients mid-connection.
+            directory: '%kernel.project_dir%/var/mcp-sessions'
+    # Tools are discovered from this directory via the #[McpTool] attribute.
+    discovery:
+        scan_dirs:
+            - 'src/Mcp'

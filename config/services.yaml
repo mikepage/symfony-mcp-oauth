@@ -1,23 +1,61 @@
 # yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
 
-# This file is the entry point to configure your own services.
-# Files in the packages/ subdirectory configure your dependencies.
-# See also https://symfony.com/doc/current/service_container/import.html
-
-# Put parameters here that don't need to change on each machine where the app is deployed
-# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    # RSA key pair the OAuth authorization server signs access-token JWTs with.
+    # Generate them with `make keys` (see README); never commit the private key.
+    oauth.private_key_path: '%kernel.project_dir%/config/oauth/private.pem'
+    oauth.public_key_path: '%kernel.project_dir%/config/oauth/public.pem'
+
+    # Hosts the MCP endpoint is served on. Used by the Streamable HTTP transport's
+    # DNS-rebinding protection (see App\Mcp\Controller\McpController); requests with
+    # any other Host are rejected with a 403. Add your production host here.
+    mcp.allowed_hosts:
+        - 'localhost'
+        - '127.0.0.1'
 
 services:
-    # default configuration for services in *this* file
     _defaults:
-        autowire: true      # Automatically injects dependencies in your services.
-        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        autowire: true
+        autoconfigure: true
 
-    # makes classes in src/ available to be used as services
-    # this creates a service per class whose id is the fully-qualified class name
     App\:
         resource: '../src/'
+        exclude:
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+            # league/oauth2-server value objects are plain data instantiated by hand.
+            - '../src/OAuth/Entity/'
 
-    # add more service definitions when explicit configuration is needed
-    # please note that last definitions always *replace* previous ones
+    # OAuth 2.1 authorization + resource servers (league/oauth2-server)
+    App\OAuth\OAuthServerFactory:
+        arguments:
+            $privateKeyPath: '%oauth.private_key_path%'
+            $publicKeyPath: '%oauth.public_key_path%'
+            $passphrase: '%env(OAUTH_KEY_PASSPHRASE)%'
+            $encryptionKey: '%env(OAUTH_ENCRYPTION_KEY)%'
+
+    League\OAuth2\Server\AuthorizationServer:
+        factory: ['@App\OAuth\OAuthServerFactory', 'createAuthorizationServer']
+
+    League\OAuth2\Server\ResourceServer:
+        factory: ['@App\OAuth\OAuthServerFactory', 'createResourceServer']
+
+    # Our MCP controller, wired like the bundle's but with an allowlisted
+    # DNS-rebinding middleware (see the class for why).
+    App\Mcp\Controller\McpController:
+        arguments:
+            $server: '@mcp.server'
+            $httpMessageFactory: '@mcp.psr_http_factory'
+            $httpFoundationFactory: '@mcp.http_foundation_factory'
+            $responseFactory: '@mcp.psr17_factory'
+            $streamFactory: '@mcp.psr17_factory'
+            $allowedHosts: '%mcp.allowed_hosts%'
+            $logger: '@logger'
+        tags:
+            - { name: controller.service_arguments }
+            - { name: monolog.logger, channel: mcp }
+
+    # Point the bundle's MCP route (mcp.server.controller::handle) at our controller.
+    mcp.server.controller:
+        alias: App\Mcp\Controller\McpController
+        public: true

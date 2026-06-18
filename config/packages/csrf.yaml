@@ -1,0 +1,8 @@
+# Stateless CSRF protection for the OAuth login / consent forms, so the
+# browser-facing flow does not depend on session-stored CSRF tokens.
+framework:
+    csrf_protection:
+        stateless_token_ids:
+            - submit
+            - authenticate
+            - logout

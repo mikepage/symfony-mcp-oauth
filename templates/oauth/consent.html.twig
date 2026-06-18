@@ -1,0 +1,31 @@
+{% extends 'oauth/base.html.twig' %}
+
+{% block body %}
+    {% import 'oauth/_form.html.twig' as form %}
+
+    <div class="card">
+        <h1>Authorize access</h1>
+        <p><strong>{{ client_name }}</strong> wants to access this server on your behalf.</p>
+
+        <p>It is requesting the following permissions:</p>
+        <ul class="scopes">
+            {% for scope in scopes %}
+                <li>{{ scope }}</li>
+            {% endfor %}
+        </ul>
+
+        <div class="muted">Signed in as {{ user.userIdentifier }}</div>
+
+        <form method="post" action="{{ path('oauth_authorize') }}">
+            {% for key, value in parameters %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endfor %}
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('submit') }}">
+
+            <div class="row">
+                {{ form.submit('Deny', 'secondary', name='action', value='deny') }}
+                {{ form.submit('Allow', 'primary', name='action', value='approve') }}
+            </div>
+        </form>
+    </div>
+{% endblock %}
